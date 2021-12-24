@@ -47,37 +47,40 @@ co2_data_full.columns = [
 # for handling NaN's see https://pandas.pydata.org/pandas-docs/stable/user_guide/missing_data.html
 co2_data = co2_data_full.dropna()
 
+#get Northerm Hemisphere mean monthly surface temp data
+temp_data_source = "NH.Ts+dSST.csv"
+#there are three seperate datasets in the csv, I'm picking out v7
+temp_data_full = pd.read_csv(
+    temp_data_source, skiprows=np.concatenate([np.arange(0, 23), np.arange(44, 66)]), na_values="*******"
+)
+
+temp_data = temp_data_full[['Year', 'Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec']]
+temp_data = temp_data.melt(id_vars=['Year'])
+temp_data = temp_data.sort_values(by='Year', kind='stable', ignore_index=True)
+temp_data.rename(columns = {'variable': 'Month', 'value': 'Temp'}, inplace = True)
+
+months = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec']
+
 # A linear model with slope and intercept to predict CO2
 def predict_co2(slope, intercept, initial_date, prediction_date):
     a = slope * (prediction_date-initial_date) + intercept
     
     return a
 
+
+instructions = open("instructions.md", "r")
+instructions_markdown = instructions.read()
+
+sources = open("sources.md", "r")
+sources_markdown = sources.read()
+
 ##################################
 # Lay out the page 
 app.layout = html.Div([
 # Introduction
-    dcc.Markdown('''
-        ### Approximate linear models for CO_2 at Mauna Loa, Hawaii
-
-        This plot shows measurements of monthly-averaged CO_2 concentrations (in ppm) at the
-        Mauna Loa Observatory between 1958 and 2020. An adjustable linear trend is also plotted. 
-        
-        **Instructions:**
-        - Adjust the slope and intercept of the linear trend so the straight line "fits" the *first 5 years* of data. 
-            - Adjust "Signal type" and "Plot segment" to refine your fit. 
-            - Click a slider, then use keyboard left/right arrows to "slide" the control. 
-            - Note the value for "Predicted CO_2 for 2030" (the graph's title).
-        - Do the same to make the line fit the *most recent* 5 years of data. 
-            - Note the new value for "Predicted CO_2 for 2030".
-        - Do your two linear models predict the same CO2 concentrations for the year 2030? 
-        - Small icons between controls and graph have mouse-over tool tips. 
-        - If desired, use the "Download plot as png" to save an image of your work. 
-        - Feedback about this dashboard app can be given using the form below the graph. Your insights will help us refine dashboards for learning. 
-
-        ----
-        
-        '''),
+    dcc.Markdown(
+        children=instructions_markdown
+    ),
     # controls for plot
     html.Div([
         dcc.Markdown(''' **_Slope:_** '''),
@@ -117,16 +120,33 @@ app.layout = html.Div([
 #        ),
 #    ], style={'width': '48%', 'display': 'inline-block'}),
 
+    
+    # html.Div([
+    #     dcc.Markdown(''' **_Signal type:_** '''),
+    #      dcc.RadioItems(
+    #         id='Data_type',
+    #         options=[
+    #         {'label': 'Seasonally adjusted data', 'value': 'adj'},
+    #         {'label': 'Raw data', 'value': 'raw'}
+    #         ],
+    #         value='raw'
+    #     ),
+    # ], style={'width': '48%', 'display': 'inline-block'}),
+    
+
+
     html.Div([
         dcc.Markdown(''' **_Signal type:_** '''),
-         dcc.RadioItems(
-            id='Data_type',
+        dcc.Checklist(
+            id='data_type',
             options=[
-            {'label': 'Seasonally adjusted data', 'value': 'adj'},
-            {'label': 'Raw data', 'value': 'raw'}
+                {'label': 'Raw data', 'value': 'raw'},
+                {'label': 'Seasonally adjusted data', 'value': 'adj'},
+                {'label': 'Fit', 'value': 'fit'},
+                {'label': 'Seasonally adjusted fit', 'value': 'adj_fit'},
             ],
-            value='raw'
-        ),
+            value=['raw']
+        )
     ], style={'width': '48%', 'display': 'inline-block'}),
 
 # Done this way to make easier to set appropriate y-axis limits
@@ -144,32 +164,49 @@ app.layout = html.Div([
         ),
     ], style={'width': '48%', 'display': 'inline-block'}),
 
+
+    html.Div([
+        dcc.Dropdown(
+            id='month_selection',
+            options=[
+                {'label': 'All', 'value': 'all'},
+                {'label': 'January', 'value': 1},
+                {'label': 'February', 'value': 2},
+                {'label': 'March', 'value': 3},
+                {'label': 'April', 'value': 4},
+                {'label': 'May', 'value': 5},
+                {'label': 'June', 'value': 6},
+                {'label': 'July', 'value': 7},
+                {'label': 'August', 'value': 8},
+                {'label': 'September', 'value': 9},
+                {'label': 'October', 'value': 10},
+                {'label': 'November', 'value': 11},
+                {'label': 'December', 'value': 12}
+            ],
+            value='all'
+        ),
+    ], style={'width': '48%', 'display': 'inline-block'}),
+    
+
 # after controls, place plot
     dcc.Graph(
         id='graph',
         config={
             'displayModeBar': True,
             'modeBarButtonsToRemove': ['select', 'lasso2d', 'resetScale'],                     
-            }
-        ),
+        }
+    ),
 
     # long generic survey
     # html.Iframe(src="https://ubc.ca1.qualtrics.com/jfe/form/SV_3yiBycgV0t8YhCu", style={"height": "800px", "width": "100%"}), 
     # short generic survey: 
-    html.Iframe(src="https://ubc.ca1.qualtrics.com/jfe/form/SV_9zS1U0C7odSt76K", style={"height": "800px", "width": "100%"}),
+    # html.Iframe(src="https://ubc.ca1.qualtrics.com/jfe/form/SV_9zS1U0C7odSt76K", style={"height": "800px", "width": "100%"}),
 
 
 # closing text
-    dcc.Markdown('''
-        ----
-        #### Credits
-
-        * Derived from [L. Heagy's presentation](https://ubc-dsci.github.io/jupyterdays/sessions/heagy/widgets-and-dashboards.html) at
-        UBC's Jupyter Days 2020, which in turn is adapted from the [Intro-Jupyter tutorial from ICESat-2Hackweek](https://github.com/ICESAT-2HackWeek/intro-jupyter). 
-        * This version, code by F. Jones.
-        * Original data are at the [Scripps CO2 program](https://scrippsco2.ucsd.edu/data/atmospheric_co2/primary_mlo_co2_record.html). See the NOAA [Global Monitoring Laboratory](https://www.esrl.noaa.gov/gmd/ccgg/trends/) for additional details.
-    
-    '''),
+    dcc.Markdown(
+        children=sources_markdown
+    ),
 ], style={'width': '900px'}
 )
 
@@ -180,28 +217,45 @@ app.layout = html.Div([
     Output('graph', 'figure'),
     Input('line_slope', 'value'),
     Input('line_intcpt', 'value'),
-    Input('Data_type', 'value'),
+    Input('data_type', 'value'),
 #    Input('start', 'value'),
 #    Input('end', 'value'),
     Input('zone', 'value'),
+    Input('month_selection', 'value'),
     )
 #def update_graph(line_slope, line_intcpt, Data_type, start, end, zone):
-def update_graph(line_slope, line_intcpt, Data_type, zone):
+def update_graph(line_slope, line_intcpt, data_type, zone, month_selection):
 # construct all the figure's components
     plot = go.Figure()
 
-    l1 = line_slope * (co2_data.date - np.min(co2_data.date)) + line_intcpt
+    if month_selection == 'all':
+        co2_data_plot = co2_data
+        temp_data_plot = temp_data
+    else:
+        co2_data_plot = co2_data[co2_data.month == month_selection]
+        temp_data_plot = temp_data[temp_data.Month == months[month_selection-1]]
 
-    if Data_type == 'raw':
-        plot.add_trace(go.Scatter(x=co2_data.date, y=co2_data.raw_co2, mode='markers',
-            line=dict(color='MediumTurquoise'), name="CO2"))
-    if Data_type == 'adj':
-        plot.add_trace(go.Scatter(x=co2_data.date, y=co2_data.seasonally_adjusted, mode='markers',
-            line=dict(color='MediumTurquoise'), name="CO2"))
+    l1 = line_slope * (co2_data_plot.date - np.min(co2_data_plot.date)) + line_intcpt
+
+    if 'raw' in data_type:
+        plot.add_trace(go.Scatter(x=co2_data_plot.date, y=co2_data_plot.raw_co2, mode='markers',
+            line=dict(color='Crimson'), name="CO2 - raw data"))
+    if 'adj' in data_type:
+        plot.add_trace(go.Scatter(x=co2_data_plot.date, y=co2_data_plot.seasonally_adjusted, mode='markers',
+            line=dict(color='Orchid'), name="CO2 - seasonally adjusted"))
+    if 'fit' in data_type:
+        plot.add_trace(go.Scatter(x=co2_data_plot.date, y=co2_data_plot.fit, mode='markers',
+            line=dict(color='DarkGreen'), name="CO2 - fit"))
+    if 'adj_fit' in data_type:
+        plot.add_trace(go.Scatter(x=co2_data_plot.date, y=co2_data_plot.seasonally_adjusted_fit, mode='markers',
+            line=dict(color='MediumTurquoise'), name="CO2 - seasonally adjusted fit"))
     
-    plot.add_trace(go.Scatter(x=co2_data.date, y=l1, mode='lines',
+    plot.add_trace(go.Scatter(x=co2_data_plot.date, y=l1, mode='lines',
         line=dict(color='SandyBrown'), name="linear fit"))
     
+    #plot.add_trace(go.Scatter(x=co2_data_plot.date, y=l1, mode='lines',
+    #    line=dict(color='SandyBrown'), name="linear fit"))
+
     plot.update_layout(xaxis_title='Year', yaxis_title='ppm')
 #    plot.update_xaxes(range=[start, end])
     
