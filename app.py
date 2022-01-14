@@ -52,7 +52,7 @@ mlo_data = mlo_data_full.dropna()
 #South Pole data
 spo_data_source = "data/monthly_merge_co2_spo.csv"
 spo_data_full = pd.read_csv(
-    spo_data_source, skiprows=np.arange(0, 58), na_values="-99.99"
+    spo_data_source, skiprows=np.arange(0, 58), na_values="      NaN"
 )
 
 spo_data_full.columns = [
@@ -98,7 +98,7 @@ app.layout = html.Div([
             ],
             value=['mlo']
         )
-    ], style={'width': '40%', 'display': 'inline-block'}),
+    ], style={'width': '40%', 'display': 'inline-block', 'vertical-align': 'top'}),
 
 
     html.Div([
@@ -123,17 +123,38 @@ app.layout = html.Div([
             value=['all'],
             multi=True
         ),
-    ], style={'width': '48%', 'display': 'inline-block'}),
+    ], style={'width': '60%', 'display': 'inline-block', 'vertical-align': 'top'}),
     
 
 # after controls, place plot
-    dcc.Graph(
-        id='graph',
-        config={
-            'displayModeBar': True,
-            #'modeBarButtonsToRemove': ['select', 'lasso2d', 'resetScale'],                     
-        }
-    ),
+    html.Div([
+        dcc.RangeSlider(
+            id='ylim_slider',
+            min=300,
+            max=450,
+            step=1.0,
+            marks={
+                300: '300',
+                350: '350',
+                400: '400',
+                450: '450',
+            },
+            value=[300, 450],
+            vertical=True,
+            verticalHeight=270
+
+        ),
+    ], style={'width': '5%', 'margin-left': '5px', 'margin-top': '20px', 'display': 'inline-block', 'vertical-align': 'middle'}),
+
+    html.Div([
+        dcc.Graph(
+            id='graph',
+            config={
+                'displayModeBar': True,
+                #'modeBarButtonsToRemove': ['select', 'lasso2d', 'resetScale'],                     
+            }
+        ),
+    ], style={'width': '93%', 'display': 'inline-block', 'vertical-align': 'middle'}),
 
     #range slider to choose xlim
     html.Div([
@@ -155,7 +176,7 @@ app.layout = html.Div([
             },
             value=[1957, 2021]
         ),
-    ], style={'width': '67%', 'margin-left': '60px', 'display': 'inline-block'}),
+    ], style={'width': '76%', 'margin-left': '60px', 'display': 'inline-block'}),
 
     #fitting instructions
     dcc.Markdown(
@@ -179,7 +200,18 @@ app.layout = html.Div([
             marks={220:'220', 240:'240', 260:'260', 280:'280', 300:'300', 320:'320'},
             tooltip={'always_visible':True, 'placement':'topLeft'}
         ),
-    ], style={'width': '48%', 'display': 'inline-block'}),    
+    ], style={'width': '48%', 'display': 'inline-block', 'margin-bottom': '20px'}),    
+
+    html.Div([
+        dcc.Markdown(''' **_Plot Approximation:_** '''),
+        dcc.Checklist(
+            id='plot_fit',
+            options=[
+                {'label': 'manual straight line approximation', 'value': 'fit'},
+            ],
+            value=['fit']
+        )
+    ], style={'width': '48%', 'display': 'inline-block', 'vertical-align': 'top'}),
 
     html.Div([
         dcc.Markdown(''' **_Prediction Year:_** '''),
@@ -190,7 +222,7 @@ app.layout = html.Div([
         dcc.Markdown(
             id='prediction'
         ),
-    ]),    
+    ], style={'width': '40%', 'display': 'inline-block', 'vertical-align': 'top'}),
 
     # long generic survey
     # html.Iframe(src="https://ubc.ca1.qualtrics.com/jfe/form/SV_3yiBycgV0t8YhCu", style={"height": "800px", "width": "100%"}), 
@@ -216,10 +248,11 @@ app.layout = html.Div([
     Input('data_type', 'value'),
     Input('month_selection', 'value'),
     Input('xlim_slider', 'value'),
-    Input('predict_input', 'value')
+    Input('ylim_slider', 'value'),
+    Input('predict_input', 'value'),
+    Input('plot_fit', 'value')
 )
-#def update_graph(line_slope, line_intcpt, Data_type, start, end):
-def update_graph(line_slope, line_intcpt, data_type, month_selection, xlim_slider, predict_input):
+def update_graph(line_slope, line_intcpt, data_type, month_selection, xlim_slider, ylim_slider, predict_input, plot_fit):
 # construct all the figure's components
     #multiple y axes: https://plotly.com/python/multiple-axes/
     plot = go.Figure()
@@ -237,19 +270,24 @@ def update_graph(line_slope, line_intcpt, data_type, month_selection, xlim_slide
     #plot the co2 data
     if 'mlo' in data_type:
         plot.add_trace(go.Scatter(x=mlo_data_plot.date, y=mlo_data_plot.raw_co2, mode='markers',
-            line=dict(color='Crimson'), name="CO2 - Mauna Loa"))
+            line=dict(color='Crimson'), name="CO2 - Mauna Loa".ljust(20, ' ')))
     if 'spo' in data_type:
         plot.add_trace(go.Scatter(x=spo_data_plot.date, y=spo_data_plot.raw_co2, mode='markers',
-            line=dict(color='Orchid'), name="CO2 - South Pole"))
+            line=dict(color='Orchid'), name="CO2 - South Pole".ljust(20, ' ')))
 
     #plot the fit
-    plot.add_trace(go.Scatter(x=spo_data_plot.date, y=l1, mode='lines',
-        line=dict(color='SandyBrown'), name="manual straight line approximation"))
+    if 'fit' in plot_fit:
+        plot.add_trace(go.Scatter(x=spo_data_plot.date, y=l1, mode='lines',
+            line=dict(color='SandyBrown'), name="manual straight line<br> approximation"))
 
     plot.update_layout(xaxis_title='Year', yaxis_title='ppm')
-    
+    plot.update_layout(showlegend=True)
+    plot.update_layout(margin_l=0)
+    #plot.update_layout(legend_x=1.02)
+
     #update xlim from slider
     plot.update_xaxes(range=[xlim_slider[0], xlim_slider[1]])
+    plot.update_yaxes(range=[ylim_slider[0], ylim_slider[1]])
 
     plot.layout.title = "CO_2 Concentration vs. Time"
 
