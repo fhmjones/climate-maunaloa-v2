@@ -95,6 +95,7 @@ app.layout = html.Div([
             options=[
                 {'label': 'raw Mauna Loa data', 'value': 'mlo'},
                 {'label': 'raw South Pole data', 'value': 'spo'},
+                {'label': 'manual straight line approximation', 'value': 'fit'},
             ],
             value=['mlo']
         )
@@ -203,17 +204,6 @@ app.layout = html.Div([
     ], style={'width': '48%', 'display': 'inline-block', 'margin-bottom': '20px'}),    
 
     html.Div([
-        dcc.Markdown(''' **_Plot Approximation:_** '''),
-        dcc.Checklist(
-            id='plot_fit',
-            options=[
-                {'label': 'manual straight line approximation', 'value': 'fit'},
-            ],
-            value=['fit']
-        )
-    ], style={'width': '48%', 'display': 'inline-block', 'vertical-align': 'top'}),
-
-    html.Div([
         dcc.Markdown(''' **_Prediction Year:_** '''),
         dcc.Input(
             id="predict_input", type="number",
@@ -250,9 +240,8 @@ app.layout = html.Div([
     Input('xlim_slider', 'value'),
     Input('ylim_slider', 'value'),
     Input('predict_input', 'value'),
-    Input('plot_fit', 'value')
 )
-def update_graph(line_slope, line_intcpt, data_type, month_selection, xlim_slider, ylim_slider, predict_input, plot_fit):
+def update_graph(line_slope, line_intcpt, data_type, month_selection, xlim_slider, ylim_slider, predict_input):
 # construct all the figure's components
     #multiple y axes: https://plotly.com/python/multiple-axes/
     plot = go.Figure()
@@ -274,9 +263,7 @@ def update_graph(line_slope, line_intcpt, data_type, month_selection, xlim_slide
     if 'spo' in data_type:
         plot.add_trace(go.Scatter(x=spo_data_plot.date, y=spo_data_plot.raw_co2, mode='markers',
             line=dict(color='Orchid'), name="CO2 - South Pole".ljust(20, ' ')))
-
-    #plot the fit
-    if 'fit' in plot_fit:
+    if 'fit' in data_type:
         plot.add_trace(go.Scatter(x=spo_data_plot.date, y=l1, mode='lines',
             line=dict(color='SandyBrown'), name="manual straight line<br> approximation"))
 
