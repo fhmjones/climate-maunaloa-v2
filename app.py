@@ -254,7 +254,7 @@ def update_graph(line_slope, line_intcpt, data_type, month_selection, xlim_slide
         mlo_data_plot = mlo_data[mlo_data.month.isin(month_selection)]
         spo_data_plot = spo_data[spo_data.month.isin(month_selection)]
 
-    l1 = line_slope * (spo_data_plot.date - np.min(spo_data_plot.date)) + line_intcpt
+    l1 = line_slope * (spo_data.date - np.min(spo_data.date)) + line_intcpt
 
     #plot the co2 data
     if 'mlo' in data_type:
@@ -264,7 +264,7 @@ def update_graph(line_slope, line_intcpt, data_type, month_selection, xlim_slide
         plot.add_trace(go.Scatter(x=spo_data_plot.date, y=spo_data_plot.raw_co2, mode='markers',
             line=dict(color='DarkOrange'), name="CO_2 - South Pole".ljust(20, ' ')))
     if 'fit' in data_type:
-        plot.add_trace(go.Scatter(x=spo_data_plot.date, y=l1, mode='lines',
+        plot.add_trace(go.Scatter(x=spo_data.date, y=l1, mode='lines',
             line=dict(color='#525252'), name="adjustable straight<br>line"))
 
     plot.update_layout(xaxis_title='Year', yaxis_title='ppm')
