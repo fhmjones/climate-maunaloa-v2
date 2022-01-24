@@ -73,8 +73,8 @@ def predict_co2(slope, intercept, initial_date, prediction_date):
 instructions = open("instructions.md", "r")
 instructions_markdown = instructions.read()
 
-fitting_instructions = open("fitting_instructions.md", "r")
-fitting_instructions_markdown = fitting_instructions.read()
+example_activity = open("example-activity.md", "r")
+example_activity_markdown = example_activity.read()
 
 sources = open("sources.md", "r")
 sources_markdown = sources.read()
@@ -95,7 +95,7 @@ app.layout = html.Div([
             options=[
                 {'label': 'raw Mauna Loa data', 'value': 'mlo'},
                 {'label': 'raw South Pole data', 'value': 'spo'},
-                {'label': 'manual straight line approximation', 'value': 'fit'},
+                {'label': 'adjustable straight line', 'value': 'fit'},
             ],
             value=['mlo']
         )
@@ -179,11 +179,6 @@ app.layout = html.Div([
         ),
     ], style={'width': '76%', 'margin-left': '60px', 'display': 'inline-block'}),
 
-    #fitting instructions
-    dcc.Markdown(
-        children=fitting_instructions_markdown
-    ),
-
     #fitting controls
     html.Div([
         dcc.Markdown(''' **_Slope:_** '''),
@@ -219,6 +214,11 @@ app.layout = html.Div([
     # short generic survey: 
     # html.Iframe(src="https://ubc.ca1.qualtrics.com/jfe/form/SV_9zS1U0C7odSt76K", style={"height": "800px", "width": "100%"}),
 
+
+#fitting instructions
+dcc.Markdown(
+    children=example_activity_markdown
+),
 
 # closing text
     dcc.Markdown(
@@ -259,13 +259,13 @@ def update_graph(line_slope, line_intcpt, data_type, month_selection, xlim_slide
     #plot the co2 data
     if 'mlo' in data_type:
         plot.add_trace(go.Scatter(x=mlo_data_plot.date, y=mlo_data_plot.raw_co2, mode='markers',
-            line=dict(color='Crimson'), name="CO2 - Mauna Loa".ljust(20, ' ')))
+            line=dict(color='DodgerBlue'), name="CO_2 - Mauna Loa".ljust(20, ' ')))
     if 'spo' in data_type:
         plot.add_trace(go.Scatter(x=spo_data_plot.date, y=spo_data_plot.raw_co2, mode='markers',
-            line=dict(color='Orchid'), name="CO2 - South Pole".ljust(20, ' ')))
+            line=dict(color='DarkOrange'), name="CO_2 - South Pole".ljust(20, ' ')))
     if 'fit' in data_type:
         plot.add_trace(go.Scatter(x=spo_data_plot.date, y=l1, mode='lines',
-            line=dict(color='SandyBrown'), name="manual straight line<br> approximation"))
+            line=dict(color='#525252'), name="adjustable straight<br>line"))
 
     plot.update_layout(xaxis_title='Year', yaxis_title='ppm')
     plot.update_layout(showlegend=True)
@@ -280,7 +280,7 @@ def update_graph(line_slope, line_intcpt, data_type, month_selection, xlim_slide
 
     #update prediction text
     predicted_co2 = predict_co2(line_slope, line_intcpt, 1957, predict_input)
-    predict_co2_text = f"Predicted CO2 for {predict_input}: {predicted_co2:1.2f} ppm."
+    predict_co2_text = f"Predicted CO_2 for {predict_input}: {predicted_co2:1.2f} ppm."
 
     return plot, predict_co2_text
 
